@@ -1,31 +1,13 @@
 package lox
 
-abstract class Expr {
+sealed class Expr {
+  data class Binary (val left : Expr,val operator : Token,val right : Expr,) : Expr() 
+  data class Grouping (val expression : Expr,) : Expr() 
+  data class Literal (val value : Any?,) : Expr() 
+  data class Unary (val operator : Token,val right : Expr,) : Expr() 
+}
+typealias Visitor<R> = (Expr) -> R 
 
-companion object {
-  class Binary (val left : Expr,val operator : Token,val right : Expr,) : Expr() { 
-  override fun<R> accept(visitor: Visitor<R>) : R {
-    return visitor.visitBinaryExpr(this)
-  }
-}  class Grouping (val expression : Expr,) : Expr() { 
-  override fun<R> accept(visitor: Visitor<R>) : R {
-    return visitor.visitGroupingExpr(this)
-  }
-}  class Literal (val value : Any?,) : Expr() { 
-  override fun<R> accept(visitor: Visitor<R>) : R {
-    return visitor.visitLiteralExpr(this)
-  }
-}  class Unary (val operator : Token,val right : Expr,) : Expr() { 
-  override fun<R> accept(visitor: Visitor<R>) : R {
-    return visitor.visitUnaryExpr(this)
-  }
-}}
-  interface Visitor<R> {
-    fun visitBinaryExpr(expr : Binary) : R
-    fun visitGroupingExpr(expr : Grouping) : R
-    fun visitLiteralExpr(expr : Literal) : R
-    fun visitUnaryExpr(expr : Unary) : R
-  }
-
-  abstract fun<R> accept(visitor: Visitor<R>) : R 
+fun<R> Expr.accept(visitor: Visitor<R>) : R {
+  return visitor(this)
 }

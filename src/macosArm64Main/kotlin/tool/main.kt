@@ -4,7 +4,7 @@ fun main(args: Array<String>) {
     println("Usage: generate_ast <output directory>")
   } else {
     val outputDir = args[0]
-    defineAst(outputDir, "Expr", listOf(
+    AstGenerator.defineAst(outputDir, "Expr", listOf(
       "Binary   : Expr left, Token operator, Expr right",
       "Grouping : Expr expression",
       "Literal  : Any? value",
