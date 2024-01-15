@@ -4,7 +4,9 @@ import kotlin.math.abs
 
 class Interpreter {
 
-  fun interpret(statements: List<Stmt>) {
+  private val environment = Environment()
+
+  fun interpret(statements: List<Stmt?>) {
     kotlin.runCatching {
       for (statement in statements) {
         execute(statement)
@@ -33,14 +35,23 @@ class Interpreter {
       is Expr.Grouping -> evaluate(expr.expression)
       is Expr.Literal -> expr.value
       is Expr.Unary -> visitUnaryExpr(expr)
+      is Expr.Variable -> visitVariableExpr(expr)
     }
   }
 
-  private val stmtVisitor: (Stmt) -> Unit = { stmt ->
+  private val stmtVisitor: (Stmt?) -> Unit = { stmt ->
     when (stmt) {
       is Stmt.Expression -> visitExprStatement(stmt)
       is Stmt.Print -> visitPrintStatement(stmt)
+      is Stmt.Var -> visitVarStmt(stmt)
+      else -> {}
     }
+  }
+
+  private fun visitVarStmt(stmt: Stmt.Var) {
+    val value: Any? = stmt.initializer?.let { evaluate(it) }
+
+    environment.define(stmt.name.lexeme, value)
   }
 
   private fun visitPrintStatement(stmt: Stmt.Print) {
@@ -50,6 +61,11 @@ class Interpreter {
 
   private fun visitExprStatement(stmt: Stmt.Expression) {
     evaluate(stmt.expression)
+  }
+
+
+  private fun visitVariableExpr(expr: Expr.Variable): Any? {
+    return environment.get(expr.name)
   }
 
   private fun visitUnaryExpr(expr: Expr.Unary): Comparable<*>? {
@@ -141,8 +157,8 @@ class Interpreter {
     return expr.accept(exprVisitor)
   }
 
-  private fun execute(stmt: Stmt) {
-    stmt.accept(stmtVisitor)
+  private fun execute(stmt: Stmt?) {
+    stmt?.accept(stmtVisitor)
   }
 
   private fun isTruthy(obj: Any?): Boolean {

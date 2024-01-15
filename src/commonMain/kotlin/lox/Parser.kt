@@ -46,6 +46,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
         TokenType.WHILE,
         TokenType.PRINT,
         TokenType.RETURN -> return
+
         else -> {}
       }
 
@@ -129,6 +130,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
       match(TokenType.TRUE) -> return Expr.Literal(true)
       match(TokenType.NIL) -> return Expr.Literal(null)
       match(TokenType.NUMBER, TokenType.STRING) -> return Expr.Literal(previous().literal)
+      match(TokenType.IDENTIFIER) -> return Expr.Variable(previous())
       match(TokenType.LEFT_PAREN) -> {
         val expr = expression()
         consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
@@ -154,17 +156,43 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return expr
   }
 
-  fun parse() :List<Stmt> {
-    val statements = ArrayList<Stmt>()
-    while(!isAtEnd) {
-      statements.add(statement())
+  fun parse(): List<Stmt?> {
+    val statements = ArrayList<Stmt?>()
+    while (!isAtEnd) {
+      statements.add(declaration())
     }
     return statements
   }
 
+  private fun declaration(): Stmt? {
+    kotlin.runCatching {
+      if (match(TokenType.VAR)) {
+        return varDeclaration()
+      } else {
+        return statement()
+      }
+    }.onFailure {
+      synchronize()
+      return null
+    }
+    return null
+  }
+
+  private fun varDeclaration(): Stmt {
+    val name = consume(TokenType.IDENTIFIER, "Expect variable name.")
+    var initializer: Expr? = null
+
+    if (match(TokenType.EQUAL)) {
+      initializer = expression()
+    }
+
+    consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.")
+    return Stmt.Var(name, initializer)
+  }
+
   // statement      → exprStmt
   //               | printStmt ;
-  private fun statement():Stmt {
+  private fun statement(): Stmt {
     return if (match(TokenType.PRINT)) printStatement() else expressionStatement()
   }
 
@@ -176,7 +204,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   }
 
   //printStmt      → "print" expression ";" ;
-  private fun printStatement() : Stmt {
+  private fun printStatement(): Stmt {
     val value = expression()
     consume(TokenType.SEMICOLON, "Expect ';' after value.")
     return Stmt.Print(value)
