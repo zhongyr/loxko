@@ -179,7 +179,6 @@ class Scanner(private val source: String) {
   private fun addToken(type: TokenType, literal: Any? = null) {
     val text: String = source.substring(start, current)
     tokens.add(Token(type, text, literal, line))
-    println("token added: $type, $literal")
   }
 
   private val isAtEnd get() = current >= source.length
