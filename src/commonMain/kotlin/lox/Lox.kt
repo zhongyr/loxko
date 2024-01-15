@@ -3,6 +3,7 @@ package lox
 import kotlinx.io.Buffer
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.Path
+import kotlinx.io.readString
 import kotlin.io.println
 class Lox {
   companion object {
@@ -17,7 +18,7 @@ class Lox {
             }
           }
         }
-        run(buffer.toString())
+        run(buffer.readString())
         if (hadError) println("exit with error")
       }.onFailure {
         it.printStackTrace()
@@ -25,9 +26,13 @@ class Lox {
     }
     fun runPrompt() {
       while (true) {
-        val line = readlnOrNull() ?: break
-        run(line)
-        hadError = false
+        kotlin.runCatching {
+          val line = readlnOrNull()
+          if (line != null) run(line)
+          hadError = false
+        }.onFailure {
+          it.printStackTrace()
+        }
       }
     }
 
@@ -55,7 +60,7 @@ class Lox {
 
       if (hadError) return
 
-      print(AstPrinter().print(expression))
+      println(AstPrinter().print(expression))
     }
   }
 }

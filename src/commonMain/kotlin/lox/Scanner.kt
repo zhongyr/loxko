@@ -62,10 +62,10 @@ class Scanner(private val source: String) {
       else -> {
         if (isDigit(char)) {
           number()
-        } else if (isDigit(char)) {
+        } else if (isAlpha(char)) {
           identifier()
         } else {
-          Lox.error(line, "Unexpected character.")
+          Lox.error(line, "Unexpected character: $char")
         }
       }
     }
@@ -179,6 +179,7 @@ class Scanner(private val source: String) {
   private fun addToken(type: TokenType, literal: Any? = null) {
     val text: String = source.substring(start, current)
     tokens.add(Token(type, text, literal, line))
+    println("token added: $type, $literal")
   }
 
   private val isAtEnd get() = current >= source.length
