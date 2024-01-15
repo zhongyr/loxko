@@ -7,7 +7,7 @@ class AstPrinter {
     return expr.accept(visitor)
   }
 
-  private val visitor : Visitor<String> = {expr ->
+  private val visitor : ExprVisitor<String> = {expr ->
     when (expr) {
       is Expr.Binary -> parenthesize(expr.operator.lexeme, expr.left, expr.right)
       is Expr.Grouping -> parenthesize("group", expr.expression)

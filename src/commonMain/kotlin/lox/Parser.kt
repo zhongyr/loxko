@@ -154,12 +154,32 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return expr
   }
 
-  fun parse() :Expr? {
-    runCatching{
-      return expression()
-    }.onFailure {
-      return null
+  fun parse() :List<Stmt> {
+    val statements = ArrayList<Stmt>()
+    while(!isAtEnd) {
+      statements.add(statement())
     }
-    return null
+    return statements
   }
+
+  // statement      → exprStmt
+  //               | printStmt ;
+  private fun statement():Stmt {
+    return if (match(TokenType.PRINT)) printStatement() else expressionStatement()
+  }
+
+  //exprStmt       → expression ";" ;
+  private fun expressionStatement(): Stmt {
+    val expr = expression()
+    consume(TokenType.SEMICOLON, "Eexpect ';' after value.")
+    return Stmt.Expression(expr)
+  }
+
+  //printStmt      → "print" expression ";" ;
+  private fun printStatement() : Stmt {
+    val value = expression()
+    consume(TokenType.SEMICOLON, "Expect ';' after value.")
+    return Stmt.Print(value)
+  }
+
 }

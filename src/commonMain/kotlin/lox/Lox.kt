@@ -68,11 +68,10 @@ class Lox {
       val scanner = Scanner(content)
       val tokens: List<Token> = scanner.scanTokens()
       val parser = Parser(tokens)
-      val expression = parser.parse() ?: Expr.Literal(null)
-
+      val statements = parser.parse()
       if (hadError) return
 
-      interpreter.interpret(expression)
+      interpreter.interpret(statements)
     }
   }
 }

@@ -22,7 +22,7 @@ class AstGenerator {
     }
 
     private fun defineVisitor(buffer: Buffer, baseName: String) {
-      buffer.writeString("typealias Visitor<R> = ($baseName) -> R \n")
+      buffer.writeString("typealias ${baseName}Visitor<R> = ($baseName) -> R \n")
     }
 
     fun defineAst(outputDir: String, baseName: String, types: List<String>) {
@@ -49,7 +49,7 @@ sealed class $baseName {
         defineVisitor(this, baseName)
         this.writeString("\n")
         this.writeString("""
-          fun<R> $baseName.accept(visitor: Visitor<R>) : R {
+          fun<R> $baseName.accept(visitor: ${baseName}Visitor<R>) : R {
             return visitor(this)
           }
         """.trimIndent()

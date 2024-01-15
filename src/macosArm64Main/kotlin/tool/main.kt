@@ -10,5 +10,9 @@ fun main(args: Array<String>) {
       "Literal  : Any? value",
       "Unary    : Token operator, Expr right"
     ))
+    AstGenerator.defineAst(outputDir, "Stmt", listOf(
+      "Expression : Expr expression",
+      "Print : Expr expression"
+    ))
   }
 }

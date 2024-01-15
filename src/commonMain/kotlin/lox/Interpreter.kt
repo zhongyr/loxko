@@ -1,12 +1,14 @@
 package lox
 
 import kotlin.math.abs
+
 class Interpreter {
 
-  fun interpret(expression: Expr) {
+  fun interpret(statements: List<Stmt>) {
     kotlin.runCatching {
-      val value = evaluate(expression)
-      println(stringify(value))
+      for (statement in statements) {
+        execute(statement)
+      }
     }.onFailure {
       if (it is RuntimeError) Lox.runtimeError(it)
     }
@@ -25,13 +27,29 @@ class Interpreter {
     return obj.toString()
   }
 
-  private val visitor: (Expr) -> Any? = { expr ->
+  private val exprVisitor: (Expr) -> Any? = { expr ->
     when (expr) {
       is Expr.Binary -> visitBinaryExpr(expr)
       is Expr.Grouping -> evaluate(expr.expression)
       is Expr.Literal -> expr.value
       is Expr.Unary -> visitUnaryExpr(expr)
     }
+  }
+
+  private val stmtVisitor: (Stmt) -> Unit = { stmt ->
+    when (stmt) {
+      is Stmt.Expression -> visitExprStatement(stmt)
+      is Stmt.Print -> visitPrintStatement(stmt)
+    }
+  }
+
+  private fun visitPrintStatement(stmt: Stmt.Print) {
+    val value = evaluate(stmt.expression)
+    println(stringify(value))
+  }
+
+  private fun visitExprStatement(stmt: Stmt.Expression) {
+    evaluate(stmt.expression)
   }
 
   private fun visitUnaryExpr(expr: Expr.Unary): Comparable<*>? {
@@ -120,7 +138,11 @@ class Interpreter {
   }
 
   private fun evaluate(expr: Expr): Any? {
-    return expr.accept(visitor)
+    return expr.accept(exprVisitor)
+  }
+
+  private fun execute(stmt: Stmt) {
+    stmt.accept(stmtVisitor)
   }
 
   private fun isTruthy(obj: Any?): Boolean {
