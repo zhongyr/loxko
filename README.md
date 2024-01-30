@@ -25,6 +25,13 @@ for (var b = 1; a < 10000; b = temp + b) {
 }
 ```
 
+## Todo
+
+1. function calls
+2. add an easy way to bind builtin functions to target platform related functions
+
+   for example: developer may want to add a lib function __create_element() to create an Android View or UIView on iOS. The functions in side the interpreter environment should
+   mapping to the native implementations and should be able to be added dynamically while luanching the Lox env.
 
 Follows the tutorial of 
 
