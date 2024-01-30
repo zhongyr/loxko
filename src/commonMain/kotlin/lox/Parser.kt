@@ -240,16 +240,63 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   }
 
   // statement      → exprStmt
+  //               | forStmt
   //               | ifStmt
   //               | whileStmt
   //               | printStmt
   //               | block;
   private fun statement(): Stmt {
+    if (match(TokenType.FOR)) return forStatement()
     if (match(TokenType.IF)) return ifStatement()
-    if (match(TokenType.WHILE)) return whileStatement()
     if (match(TokenType.LEFT_BRACE)) return Stmt.Block(block())
     if (match(TokenType.PRINT)) return printStatement()
+    if (match(TokenType.WHILE)) return whileStatement()
     return expressionStatement()
+  }
+
+  //forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+  //                 expression? ";"
+  //                 expression? ")" statement ;
+  private fun forStatement(): Stmt {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'for'.")
+
+    val initializer: Stmt? = if (match(TokenType.SEMICOLON)) {
+      null
+    } else if (match(TokenType.VAR)) {
+      varDeclaration()
+    } else {
+      expressionStatement()
+    }
+
+    var condition: Expr? = null
+    if (!check(TokenType.SEMICOLON)) {
+      condition = expression()
+    }
+    consume(TokenType.SEMICOLON, "Expect ';' after loop condition.")
+
+    var increment: Expr? = null
+    if (!check(TokenType.RIGHT_PAREN)) {
+      increment = expression()
+    }
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after for clauses.")
+
+    var body = statement()
+    if (increment != null) {
+      body = Stmt.Block(listOf(body, Stmt.Expression(increment)))
+    }
+    if (condition == null) condition = Expr.Literal(true)
+    body = Stmt.While(condition, body)
+    if (initializer != null) {
+      body = Stmt.Block(listOf(initializer, body))
+    }
+    // de-sugar for(initialize;condition;increment){body} loop to
+    //
+    // initialize
+    // while(condition) {
+    //    body
+    //    increment
+    // }
+    return body
   }
 
   // ifStmt     -> "if" "(" expression ")" statement
