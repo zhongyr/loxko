@@ -35,6 +35,7 @@ class Interpreter {
       is Expr.Binary -> visitBinaryExpr(expr)
       is Expr.Grouping -> evaluate(expr.expression)
       is Expr.Literal -> expr.value
+      is Expr.Logical -> visitLogicalExpr(expr)
       is Expr.Unary -> visitUnaryExpr(expr)
       is Expr.Variable -> visitVariableExpr(expr)
     }
@@ -42,6 +43,7 @@ class Interpreter {
 
   private val stmtVisitor: (Stmt?) -> Unit = { stmt ->
     when (stmt) {
+      is Stmt.If -> visitIfStmt(stmt)
       is Stmt.Expression -> visitExprStatement(stmt)
       is Stmt.Print -> visitPrintStatement(stmt)
       is Stmt.Var -> visitVarStmt(stmt)
@@ -84,9 +86,29 @@ class Interpreter {
     evaluate(stmt.expression)
   }
 
+  private fun visitIfStmt(stmt: Stmt.If) {
+    if (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.thenBranch)
+    } else if (stmt.elseBranch != null) {
+      execute(stmt.elseBranch)
+    }
+  }
+
 
   private fun visitVariableExpr(expr: Expr.Variable): Any? {
     return environment.get(expr.name)
+  }
+
+  private fun visitLogicalExpr(expr: Expr.Logical): Any? {
+    val left = evaluate(expr.left)
+
+    if (expr.operator.type == TokenType.OR) {
+      if (isTruthy(left)) return left
+    } else {
+      if (!isTruthy(left)) return left
+    }
+
+    return evaluate(expr.right)
   }
 
   private fun visitUnaryExpr(expr: Expr.Unary): Comparable<*>? {
