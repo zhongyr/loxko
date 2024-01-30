@@ -142,8 +142,28 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
 
 
   private fun expression(): Expr {
-    return equality()
+    return assignment()
   }
+
+  // assignment     → IDENTIFIER "=" assignment
+  //               | equality ;
+  private fun assignment() : Expr {
+    val expr = equality()
+
+    if (match(TokenType.EQUAL)) {
+      val equals = previous()
+      val value = assignment()
+
+      if (expr is Expr.Variable) {
+        val name = expr.name
+        return Expr.Assign(name, value)
+      }
+      error(equals, "Invalid assignment target.")
+    }
+
+    return expr
+  }
+
 
   // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
   private fun equality(): Expr {
@@ -164,6 +184,8 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return statements
   }
 
+  // declaration ->       varDeclaration |
+  //                          statement;
   private fun declaration(): Stmt? {
     kotlin.runCatching {
       if (match(TokenType.VAR)) {
@@ -192,14 +214,27 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
 
   // statement      → exprStmt
   //               | printStmt ;
+  //               | block;
   private fun statement(): Stmt {
-    return if (match(TokenType.PRINT)) printStatement() else expressionStatement()
+    if (match(TokenType.PRINT)) return printStatement()
+    if (match(TokenType.LEFT_BRACE)) return Stmt.Block(block())
+    return expressionStatement()
+  }
+
+  // block      -> "{" declaration* "}" ;
+  private fun  block() : List<Stmt?> {
+    val statements:ArrayList<Stmt?> = ArrayList()
+    while (!check(TokenType.RIGHT_BRACE) && !isAtEnd) {
+      statements.add(declaration())
+    }
+    consume(TokenType.RIGHT_BRACE,"Need '}' after block." )
+    return statements
   }
 
   //exprStmt       → expression ";" ;
   private fun expressionStatement(): Stmt {
     val expr = expression()
-    consume(TokenType.SEMICOLON, "Eexpect ';' after value.")
+    consume(TokenType.SEMICOLON, "Expect ';' after value.")
     return Stmt.Expression(expr)
   }
 

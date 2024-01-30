@@ -9,6 +9,7 @@ class AstPrinter {
 
   private val visitor : ExprVisitor<String> = {expr ->
     when (expr) {
+      is Expr.Assign -> parenthesize(expr.name.lexeme)
       is Expr.Binary -> parenthesize(expr.operator.lexeme, expr.left, expr.right)
       is Expr.Grouping -> parenthesize("group", expr.expression)
       is Expr.Literal -> if (expr.value == null) "nil" else expr.value.toString()

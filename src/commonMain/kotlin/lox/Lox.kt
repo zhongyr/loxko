@@ -22,7 +22,9 @@ class Lox {
             }
           }
         }
-        run(buffer.readString())
+        val script = buffer.readString()
+//        println(script)
+        run(script)
         if (hadError || hadRuntimeError) {
           println("exit with error")
         }

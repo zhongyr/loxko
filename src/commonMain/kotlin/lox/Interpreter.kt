@@ -4,7 +4,7 @@ import kotlin.math.abs
 
 class Interpreter {
 
-  private val environment = Environment()
+  private var environment = Environment()
 
   fun interpret(statements: List<Stmt?>) {
     kotlin.runCatching {
@@ -31,6 +31,7 @@ class Interpreter {
 
   private val exprVisitor: (Expr) -> Any? = { expr ->
     when (expr) {
+      is Expr.Assign -> visitAssignExpr(expr)
       is Expr.Binary -> visitBinaryExpr(expr)
       is Expr.Grouping -> evaluate(expr.expression)
       is Expr.Literal -> expr.value
@@ -44,13 +45,33 @@ class Interpreter {
       is Stmt.Expression -> visitExprStatement(stmt)
       is Stmt.Print -> visitPrintStatement(stmt)
       is Stmt.Var -> visitVarStmt(stmt)
-      else -> {}
+      is Stmt.Block -> visitBlockStmt(stmt)
+      null -> {}
+    }
+  }
+
+  private fun visitBlockStmt(stmt: Stmt.Block) {
+    executeBlock(stmt.statements, Environment(environment))
+  }
+
+  private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+    val previous: Environment = this.environment
+
+    try {
+      this.environment = environment
+
+      for (statement in statements) {
+        execute(statement)
+      }
+    } finally {
+      this.environment = previous
     }
   }
 
   private fun visitVarStmt(stmt: Stmt.Var) {
     val value: Any? = stmt.initializer?.let { evaluate(it) }
 
+//    println(stmt.name.lexeme)
     environment.define(stmt.name.lexeme, value)
   }
 
@@ -79,6 +100,12 @@ class Interpreter {
 
       else -> null
     }
+  }
+
+  private fun visitAssignExpr(expr: Expr.Assign): Any? {
+    val value: Any? = expr.value?.let { evaluate(it) }
+    environment.assign(expr.name, value)
+    return value
   }
 
   private fun visitBinaryExpr(expr: Expr.Binary): Comparable<*>? {
