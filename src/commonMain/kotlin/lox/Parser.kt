@@ -151,7 +151,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
 
   // assignment -> IDENTIFIER "=" assignment
   //      | logic_or
-  private fun assignment() : Expr {
+  private fun assignment(): Expr {
     val expr = or()
 
     if (match(TokenType.EQUAL)) {
@@ -169,7 +169,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   }
 
   // logic_or         -> logic_and ( "or" logic_and) *;
-  private fun or() : Expr {
+  private fun or(): Expr {
     var expr = and()
 
     while (match(TokenType.OR)) {
@@ -181,17 +181,16 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   }
 
   // logic_and        -> equality ( "and" equality )* ;
-  private fun and() : Expr {
+  private fun and(): Expr {
     var expr = equality()
 
-    while(match(TokenType.AND)) {
+    while (match(TokenType.AND)) {
       val operator = previous()
       val right = equality()
       expr = Expr.Logical(expr, operator, right)
     }
     return expr
   }
-
 
   // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
   private fun equality(): Expr {
@@ -242,18 +241,20 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
 
   // statement      → exprStmt
   //               | ifStmt
+  //               | whileStmt
   //               | printStmt
   //               | block;
   private fun statement(): Stmt {
     if (match(TokenType.IF)) return ifStatement()
-    if (match(TokenType.PRINT)) return printStatement()
+    if (match(TokenType.WHILE)) return whileStatement()
     if (match(TokenType.LEFT_BRACE)) return Stmt.Block(block())
+    if (match(TokenType.PRINT)) return printStatement()
     return expressionStatement()
   }
 
   // ifStmt     -> "if" "(" expression ")" statement
   //                    ("else" statement)? ;
-  private fun ifStatement() : Stmt {
+  private fun ifStatement(): Stmt {
     consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
     val condition = expression()
     consume(TokenType.LEFT_PAREN, "Expect ')' after if condition.")
@@ -267,14 +268,23 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return Stmt.If(condition, thenBranch, elseBranch)
   }
 
+  // whileStmt   -> "while" "(" expression ")" statement ;
+  private fun whileStatement(): Stmt {
+    consume(TokenType.LEFT_PAREN, "Expect '(' after 'while'.")
+    val condition = expression()
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after condition.")
+    val body = statement()
+
+    return Stmt.While(condition, body)
+  }
 
   // block      -> "{" declaration* "}" ;
-  private fun  block() : List<Stmt?> {
-    val statements:ArrayList<Stmt?> = ArrayList()
+  private fun block(): List<Stmt?> {
+    val statements: ArrayList<Stmt?> = ArrayList()
     while (!check(TokenType.RIGHT_BRACE) && !isAtEnd) {
       statements.add(declaration())
     }
-    consume(TokenType.RIGHT_BRACE,"Need '}' after block." )
+    consume(TokenType.RIGHT_BRACE, "Need '}' after block.")
     return statements
   }
 

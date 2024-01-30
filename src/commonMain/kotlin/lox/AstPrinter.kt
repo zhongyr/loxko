@@ -15,6 +15,7 @@ class AstPrinter {
       is Expr.Literal -> if (expr.value == null) "nil" else expr.value.toString()
       is Expr.Unary -> parenthesize(expr.operator.lexeme, expr.right)
       is Expr.Variable -> expr.name.lexeme
+      else -> "to be impl"
     }
   }
 

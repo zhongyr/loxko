@@ -47,6 +47,7 @@ class Interpreter {
       is Stmt.Expression -> visitExprStatement(stmt)
       is Stmt.Print -> visitPrintStatement(stmt)
       is Stmt.Var -> visitVarStmt(stmt)
+      is Stmt.While -> visitWhileStmt(stmt)
       is Stmt.Block -> visitBlockStmt(stmt)
       null -> {}
     }
@@ -75,6 +76,12 @@ class Interpreter {
 
 //    println(stmt.name.lexeme)
     environment.define(stmt.name.lexeme, value)
+  }
+
+  private fun visitWhileStmt(stmt: Stmt.While) {
+    while (isTruthy(evaluate(stmt.condition))) {
+      execute(stmt.body)
+    }
   }
 
   private fun visitPrintStatement(stmt: Stmt.Print) {
