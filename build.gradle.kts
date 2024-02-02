@@ -37,6 +37,7 @@ kotlin {
     commonMain {
       dependencies {
         implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.3.0")
+        implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
       }
     }
     jvmMain {
