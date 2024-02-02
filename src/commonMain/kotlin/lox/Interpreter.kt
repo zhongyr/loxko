@@ -1,10 +1,13 @@
 package lox
 
+import kotlinx.datetime.Clock
 import kotlin.math.abs
 
 class Interpreter {
 
-  private var environment = Environment()
+  val globals: Environment = Environment()
+
+  private var environment = globals
 
   fun interpret(statements: List<Stmt?>) {
     kotlin.runCatching {
@@ -14,6 +17,20 @@ class Interpreter {
     }.onFailure {
       if (it is RuntimeError) Lox.runtimeError(it)
     }
+    globals.define("clock", object : LoxCallable() {
+      override fun call(interpreter: Interpreter, arguments: List<Any?>): Any {
+        return Clock.System.now().epochSeconds
+      }
+
+      override fun arity(): Int {
+        return 0
+      }
+
+      override fun toString(): String {
+        return "<native fn>"
+      }
+
+    })
   }
 
   private fun stringify(obj: Any?): String {
@@ -33,6 +50,7 @@ class Interpreter {
     when (expr) {
       is Expr.Assign -> visitAssignExpr(expr)
       is Expr.Binary -> visitBinaryExpr(expr)
+      is Expr.Call -> visitCallExpr(expr)
       is Expr.Grouping -> evaluate(expr.expression)
       is Expr.Literal -> expr.value
       is Expr.Logical -> visitLogicalExpr(expr)
@@ -46,9 +64,11 @@ class Interpreter {
       is Stmt.If -> visitIfStmt(stmt)
       is Stmt.Expression -> visitExprStatement(stmt)
       is Stmt.Print -> visitPrintStatement(stmt)
+      is Stmt.Return -> visitReturnStmt(stmt)
       is Stmt.Var -> visitVarStmt(stmt)
       is Stmt.While -> visitWhileStmt(stmt)
       is Stmt.Block -> visitBlockStmt(stmt)
+      is Stmt.Function -> visitFunctionStmt(stmt)
       null -> {}
     }
   }
@@ -57,7 +77,7 @@ class Interpreter {
     executeBlock(stmt.statements, Environment(environment))
   }
 
-  private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+  fun executeBlock(statements: List<Stmt?>, environment: Environment) {
     val previous: Environment = this.environment
 
     try {
@@ -69,6 +89,11 @@ class Interpreter {
     } finally {
       this.environment = previous
     }
+  }
+
+  private fun visitFunctionStmt(stmt: Stmt.Function) {
+    val function = LoxFunction(stmt)
+    environment.define(stmt.name.lexeme, function)
   }
 
   private fun visitVarStmt(stmt: Stmt.Var) {
@@ -87,6 +112,13 @@ class Interpreter {
   private fun visitPrintStatement(stmt: Stmt.Print) {
     val value = evaluate(stmt.expression)
     println(stringify(value))
+  }
+
+  private fun visitReturnStmt(stmt: Stmt.Return) {
+    var value: Any? = null
+    if (stmt.value != null) value = evaluate(stmt.value)
+
+    throw Return(value)
   }
 
   private fun visitExprStatement(stmt: Stmt.Expression) {
@@ -137,6 +169,26 @@ class Interpreter {
     return value
   }
 
+  private fun visitCallExpr(expr: Expr.Call): Any? {
+    val callee = evaluate(expr.callee)
+
+    val arguments = ArrayList<Any?>()
+    for (argument in expr.arguments) {
+      arguments.add(evaluate(argument))
+    }
+
+    if (callee !is LoxCallable) {
+      throw RuntimeError(expr.paren, "Can only call functions and classes.")
+    }
+    if (arguments.size != callee.arity()) {
+      throw RuntimeError(
+        expr.paren,
+        "Expected ${callee.arity()} arguments bug got ${arguments.size}."
+      )
+    }
+    return callee.call(this, arguments)
+  }
+
   private fun visitBinaryExpr(expr: Expr.Binary): Comparable<*>? {
     val left: Any? = evaluate(expr.left)
     val right: Any? = evaluate(expr.right)
@@ -161,7 +213,7 @@ class Interpreter {
 
       TokenType.LESS_EQUAL -> {
         checkNumberOperand(expr.operator, left, right)
-        (left as Double) >= (right as Double)
+        (left as Double) <= (right as Double)
       }
 
       TokenType.MINUS -> {

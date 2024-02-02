@@ -111,15 +111,46 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return expr
   }
 
-  //unary          → ( "!" | "-" ) unary
-  //               | primary ;
+  //unary          → ( "!" | "-" ) unary | call
   private fun unary(): Expr {
     if (match(TokenType.BANG, TokenType.MINUS)) {
       val operator = previous()
       val right = unary()
       return Expr.Unary(operator, right)
     }
-    return primary()
+    return call()
+  }
+
+  //call           -> primary ("(" arguments? ")" )* ;
+  // arguments     -> expression ( "," expression ) *;
+  private fun call(): Expr {
+    var expr = primary()
+
+    while (true) {
+      if (match(TokenType.LEFT_PAREN)) {
+        expr = finishCall(expr)
+      } else {
+        break
+      }
+    }
+
+    return expr
+  }
+
+  private fun finishCall(callee: Expr): Expr {
+    val arguments = ArrayList<Expr>()
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (arguments.size >= 255) {
+          error(peek(), "Can't have more than 255 arguments.")
+        }
+        arguments.add(expression())
+      } while (match(TokenType.COMMA))
+    }
+
+    val paren = consume(TokenType.RIGHT_PAREN, "Expect ')' after arguments.")
+
+    return Expr.Call(callee, paren, arguments)
   }
 
   //primary        → NUMBER | STRING | "true" | "false" | "nil"
@@ -215,16 +246,39 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   //                          statement;
   private fun declaration(): Stmt? {
     kotlin.runCatching {
+      if (match(TokenType.FUN)) {
+        return function("function")
+      }
       if (match(TokenType.VAR)) {
         return varDeclaration()
-      } else {
-        return statement()
       }
+      return statement()
+
     }.onFailure {
       synchronize()
       return null
     }
     return null
+  }
+
+  private fun function(kind: String): Stmt.Function {
+    val name = consume(TokenType.IDENTIFIER, "Expect $kind name.")
+    consume(TokenType.LEFT_PAREN, "Expect '(' after $kind name.")
+    val parameters = ArrayList<Token>()
+    if (!check(TokenType.RIGHT_PAREN)) {
+      do {
+        if (parameters.size >= 255) {
+          error(peek(), "Can't have more than 255 parameters.")
+        }
+
+        parameters.add(consume(TokenType.IDENTIFIER, " Expect a parameter name"))
+      } while (match(TokenType.COMMA))
+    }
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after parameters.")
+
+    consume(TokenType.LEFT_BRACE, "Expect '{' before $kind body.")
+    val body = block()
+    return Stmt.Function(name, parameters, body);
   }
 
   private fun varDeclaration(): Stmt {
@@ -244,12 +298,14 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   //               | ifStmt
   //               | whileStmt
   //               | printStmt
+  //               | returnStmt
   //               | block;
   private fun statement(): Stmt {
     if (match(TokenType.FOR)) return forStatement()
     if (match(TokenType.IF)) return ifStatement()
     if (match(TokenType.LEFT_BRACE)) return Stmt.Block(block())
     if (match(TokenType.PRINT)) return printStatement()
+    if (match(TokenType.RETURN)) return returnStatement()
     if (match(TokenType.WHILE)) return whileStatement()
     return expressionStatement()
   }
@@ -304,7 +360,7 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
   private fun ifStatement(): Stmt {
     consume(TokenType.LEFT_PAREN, "Expect '(' after 'if'.")
     val condition = expression()
-    consume(TokenType.LEFT_PAREN, "Expect ')' after if condition.")
+    consume(TokenType.RIGHT_PAREN, "Expect ')' after if condition.")
 
     val thenBranch = statement()
     var elseBranch: Stmt? = null
@@ -349,4 +405,14 @@ class Parser(private val tokens: List<Token>) { companion object { class ParseEr
     return Stmt.Print(value)
   }
 
+  private fun returnStatement(): Stmt {
+    val keyword = previous()
+    var value: Expr? = null
+    if (!check(TokenType.SEMICOLON)) {
+      value = expression()
+    }
+
+    consume(TokenType.SEMICOLON, "Expect ';' after return value.")
+    return Stmt.Return(keyword, value)
+  }
 }
